@@ -6,23 +6,8 @@
   </head>
   <body>
     <script type="module">
-      import {loadHTML, loadStyleSheet, loadBabylonScripts, startGame } from "./main.js";
-      async function init() {
-          try {
-              loadHTML();
-              loadStyleSheet();
-              await loadBabylonScripts();
-              const canvas = document.getElementById("renderCanvas");
-              if (!canvas) {
-                  console.error("Canvas not found! Ensure <canvas id='renderCanvas'> exists.");
-                  return;
-              }
-              await startGame();
-          } catch (error) {
-              console.error("Error initializing", error);
-          }
-      }
-      window.addEventListener("DOMContentLoaded", init);
+      import { app } from "./scripts/main.js";
+      window.addEventListener("DOMContentLoaded", app);
     </script>
   </body>
 </html>

@@ -152,4 +152,15 @@ async function startGame() {
   });
 }
 
-export { loadHTML, loadStyleSheet, loadBabylonScripts, startGame };
+async function app() {
+  try {
+    loadHTML();
+    loadStyleSheet();
+    await loadBabylonScripts();
+    await startGame();
+  } catch (error) {
+      console.error("Error initializing", error);
+  }
+}
+
+export { app };
