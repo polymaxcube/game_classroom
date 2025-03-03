@@ -1,3 +1,14 @@
+function loadHTML() {
+  const canvasZone = document.createElement("div");
+  canvasZone.id = "canvasZone";
+
+  const renderCanvas = document.createElement("canvas");
+  renderCanvas.id = "renderCanvas";
+
+  canvasZone.appendChild(renderCanvas);
+  document.body.appendChild(canvasZone);
+}
+
 function loadScript(src) {
     return new Promise((resolve, reject) => {
         const script = document.createElement('script');
@@ -6,6 +17,15 @@ function loadScript(src) {
         script.onerror = reject;
         document.head.appendChild(script);
     });
+}
+
+function loadStyleSheet() {
+  const styleElement = document.createElement("style");
+  document.head.appendChild(styleElement);
+  const sheet = styleElement.sheet;
+  sheet.insertRule("html, body { overflow: hidden; width: 100%; height: 100%; margin: 0; padding: 0; }", sheet.cssRules.length);
+  sheet.insertRule("#renderCanvas { width: 100%; height: 100%; touch-action: none; }", sheet.cssRules.length);
+  sheet.insertRule("#canvasZone { width: 100%; height: 100%; }", sheet.cssRules.length);
 }
 
 async function loadBabylonScripts() {
@@ -36,162 +56,100 @@ async function loadBabylonScripts() {
     }
 }
 
-async function main() {
-    var canvas = document.getElementById("renderCanvas");
+function awsdarrowkey(camera) {
+  /**
+   * Arrow Up (38) and W (87)
+   * Arrow Down (40) and S (83)
+   * Arrow Left (37) and A (65)
+   * Arrow Right (39) and D (68)
+   */
+  if(!camera) throw new Error("No Camera");
 
-    var startRenderLoop = function (engine, canvas) {
-      engine.runRenderLoop(function () {
-        if (sceneToRender && sceneToRender.activeCamera) {
-          sceneToRender.render();
-        }
-      });
-    };
-
-    var engine = null;
-    var scene = null;
-    var sceneToRender = null;
-    var createDefaultEngine = function () {
-      return new BABYLON.Engine(canvas, true, {
-        preserveDrawingBuffer: true,
-        stencil: true,
-        disableWebGL2Support: false,
-      });
-    };
-    var createScene = function () {
-      //-------------------------------------------------------------------------------------------------------
-      // Scene creation
-      var scene = new BABYLON.Scene(engine);
-
-      // This creates and positions a free camera
-      var camera = new BABYLON.FreeCamera(
-        "camera1",
-        new BABYLON.Vector3(0, 5, -10),
-        scene
-      );
-
-      // Lighting
-      new BABYLON.HemisphericLight(
-        "light",
-        new BABYLON.Vector3(0, 1, 0),
-        scene
-      ).intensity = 0.7;
-      var light2 = new BABYLON.DirectionalLight(
-        "dir01",
-        new BABYLON.Vector3(0.25, -1, 0.5),
-        scene
-      );
-      light2.position = new BABYLON.Vector3(0, 10, 0);
-
-      // Shadows
-      var shadowGenerator = new BABYLON.ShadowGenerator(1024, light2);
-      shadowGenerator.useBlurExponentialShadowMap = true;
-
-      // initialize physics plugin
-      var hk = new BABYLON.HavokPlugin();
-      scene.enablePhysics(new BABYLON.Vector3(0, -9.8, 0), hk);
-
-      // Mandatory ground
-      var ground = BABYLON.MeshBuilder.CreateGround(
-        "ground",
-        { width: 10, height: 10 },
-        scene
-      );
-      var groundAggregate = new BABYLON.PhysicsAggregate(
-        ground,
-        BABYLON.PhysicsShapeType.BOX,
-        { mass: 0 },
-        scene
-      );
-      const groundMaterial = new BABYLON.StandardMaterial("ground");
-      groundMaterial.diffuseTexture = new BABYLON.Texture(
-        "https://raw.githubusercontent.com/CedricGuillemet/dump/master/Ground_1mx1m.png"
-      );
-      groundMaterial.diffuseTexture.vScale = 5;
-      groundMaterial.diffuseTexture.uScale = 5;
-      ground.material = groundMaterial;
-
-      var f = new BABYLON.Vector4(0.5, 0, 1, 1);
-      var b = new BABYLON.Vector4(0, 0, 0.5, 1);
-      var card = BABYLON.MeshBuilder.CreatePlane(
-        "plane",
-        {
-          height: 1,
-          width: 0.665,
-          sideOrientation: BABYLON.Mesh.DOUBLESIDE,
-          frontUVs: f,
-          backUVs: b,
-        },
-        scene
-      );
-      card.position.y = 40;
-      var mat = new BABYLON.StandardMaterial("", scene);
-      mat.diffuseTexture = new BABYLON.Texture(
-        "assets/ninediamond.jpg",
-        scene
-      );
-      card.material = mat;
-
-      var cardAggregate = new BABYLON.PhysicsAggregate(
-        card,
-        BABYLON.PhysicsShapeType.BOX,
-        { mass: 10 },
-        scene
-      );
-
-      //-------------------------------------------------------------------------------------------------------
-      // Game State and debug
-
-      camera.setTarget(new BABYLON.Vector3(0, 0, 0));
-      var inputVelocity = new BABYLON.Vector3(0, 0, 0);
-      var time = 0;
-      var falling = false;
-      var platformHook = null;
-
-      //-------------------------------------------------------------------------------------------------------
-      // Game loop
-      scene.onBeforeAnimationsObservable.add(() => {
-        // get camera world direction and right vectors. Character will move in camera space.
-        var cameraDirection = camera.getDirection(
-          new BABYLON.Vector3(0, 0, 1)
-        );
-        cameraDirection.y = 0;
-        cameraDirection.normalize();
-        var cameraRight = camera.getDirection(new BABYLON.Vector3(1, 0, 0));
-        cameraRight.y = 0;
-        cameraRight.normalize();
-
-        var linearVelocity = new BABYLON.Vector3(0, 0, 0);
-      });
-
-      return scene;
-    };
-    window.initFunction = async function () {
-      globalThis.HK = await HavokPhysics();
-
-      var asyncEngineCreation = async function () {
-        try {
-          return createDefaultEngine();
-        } catch (e) {
-          console.log(
-            "the available createEngine function failed. Creating the default engine instead"
-          );
-          return createDefaultEngine();
-        }
-      };
-
-      window.engine = await asyncEngineCreation();
-      if (!engine) throw "engine should not be null.";
-      startRenderLoop(engine, canvas);
-      window.scene = createScene();
-    };
-    initFunction().then(() => {
-      sceneToRender = scene;
-    });
-
-    // Resize
-    window.addEventListener("resize", function () {
-      engine.resize();
-    });
+  camera.speed = 0.5; 
+  camera.keysUp = [38, 87];   
+  camera.keysDown = [40, 83];  
+  camera.keysLeft = [37, 65];  
+  camera.keysRight = [39, 68]; 
 }
 
-export { loadBabylonScripts, main };
+async function physicsInstance() {
+    const havokInstance = await HavokPhysics();
+    const hk = new BABYLON.HavokPlugin(true, havokInstance);
+    if(!hk) throw Error("Failed calling Physics.")
+    return hk;
+}
+
+async function startGame() {
+  const canvas = document.getElementById("renderCanvas");
+
+  if (!canvas) {
+      console.error("Canvas not found!");
+      return;
+  }
+
+  const engine = new BABYLON.Engine(canvas, true, {
+    preserveDrawingBuffer: true,
+    stencil: true,
+    disableWebGL2Support: false,
+  });
+  
+  if (!engine) {
+      console.error("No Engine failed to initialize!");
+      return;
+  }
+
+  const scene = new BABYLON.Scene(engine);
+  const camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, -10), scene);
+  camera.attachControl(canvas, true);
+  awsdarrowkey(camera);
+
+  const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(1, 1, 0), scene);
+
+  var ground = BABYLON.MeshBuilder.CreateGround(
+    "ground",
+    { width: 10, height: 10 },
+    scene
+  );
+
+  const groundMaterial = new BABYLON.StandardMaterial("ground");
+  groundMaterial.diffuseTexture = new BABYLON.Texture(
+    "https://raw.githubusercontent.com/CedricGuillemet/dump/master/Ground_1mx1m.png"
+  );
+  groundMaterial.diffuseTexture.vScale = 5;
+  groundMaterial.diffuseTexture.uScale = 5;
+  ground.material = groundMaterial;
+
+  //Card1
+  var f = new BABYLON.Vector4(0.5, 0, 1, 1);
+  var b = new BABYLON.Vector4(0, 0, 0.5, 1);
+  var card = BABYLON.MeshBuilder.CreatePlane("card1", { height: 1, width: 0.665, sideOrientation: BABYLON.Mesh.DOUBLESIDE, frontUVs: f, backUVs: b, }, scene);
+  card.position.y = 40;
+  var mat = new BABYLON.StandardMaterial("", scene);
+  mat.diffuseTexture = new BABYLON.Texture(
+    "assets/ninediamond.jpg",
+    scene
+  );
+  card.material = mat;
+  
+  /*
+  ** Before game loop
+  */
+  const hk = await physicsInstance();
+  scene.enablePhysics(new BABYLON.Vector3(0, -9.8, 0), hk);
+
+  /**
+  * Assign Physics to Objects
+  */
+  var groundAggregate = new BABYLON.PhysicsAggregate(ground, BABYLON.PhysicsShapeType.BOX, { mass: 0 }, scene);
+  var cardAggregate = new BABYLON.PhysicsAggregate(card, BABYLON.PhysicsShapeType.BOX, { mass: 10 }, scene);
+
+  engine.runRenderLoop(() => {
+      scene.render();
+  });
+
+  window.addEventListener("resize", () => {
+      engine.resize();
+  });
+}
+
+export { loadHTML, loadStyleSheet, loadBabylonScripts, startGame };
