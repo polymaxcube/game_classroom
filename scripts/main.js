@@ -123,7 +123,7 @@ async function startGame() {
   var f = new BABYLON.Vector4(0.5, 0, 1, 1);
   var b = new BABYLON.Vector4(0, 0, 0.5, 1);
   var card = BABYLON.MeshBuilder.CreatePlane("card1", { height: 1, width: 0.665, sideOrientation: BABYLON.Mesh.DOUBLESIDE, frontUVs: f, backUVs: b, }, scene);
-  card.position.y = 40;
+  card.position.y = 20;
   var mat = new BABYLON.StandardMaterial("", scene);
   mat.diffuseTexture = new BABYLON.Texture(
     "assets/ninediamond.jpg",
